@@ -1,0 +1,14 @@
+
+Save it.
+
+---
+
+Ab requirements.txt open karo aur ye likho:
+
+```text
+fastapi
+uvicorn
+pydantic
+python-multipart
+langchain
+
