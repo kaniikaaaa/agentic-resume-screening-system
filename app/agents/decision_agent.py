@@ -23,16 +23,17 @@ class DecisionAgent:
             }
 
         # Decision thresholds
-        if final_score >= 80:
+        if final_score >= 85:
             recommendation = "Proceed to interview"
             confidence = 0.9
-        elif 60 <= final_score < 80:
+        elif 65 <= final_score < 85:
             recommendation = "Needs manual review"
             requires_human = True
             confidence = 0.6
         else:
             recommendation = "Reject"
             confidence = 0.75
+
 
         return {
             "final_score": final_score,
