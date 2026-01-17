@@ -275,5 +275,81 @@ Transparent decision-making
 
 Which directly aligns with Pitcrew’s philosophy of explainable, trustworthy AI systems.
 
+🔁 LLM Execution Modes (Hybrid Design)
+
+This system supports two execution modes:
+
+LLM Mode (Default)
+
+Uses Gemini LLM for semantic understanding of resumes and job descriptions.
+
+Provides intelligent extraction of skills, experience, and requirements.
+
+Activated when:
+
+USE_LLM=true
+
+
+Deterministic Mode (Fallback)
+
+Uses rule-based parsing when:
+
+LLM quota is exhausted
+
+API is unavailable
+
+LLM returns invalid responses
+
+Ensures system never crashes and always produces output.
+
+Activated when:
+
+USE_LLM=false
+
+
+This hybrid design ensures reliability, stability, and explainability.
+
+🧠 Quota & Failure Safe Design
+
+The system is designed to gracefully handle:
+
+API quota exhaustion (429 errors)
+
+Network failures
+
+Invalid LLM JSON responses
+
+In such cases:
+
+The pipeline automatically switches to deterministic mode
+
+Hiring decisions are still produced
+
+Human-in-the-loop is triggered when uncertainty exists
+
+This matches real-world AI backend reliability standards.
+
+🧪 Testing in Both Modes
+
+Run with LLM:
+
+$env:USE_LLM="true"
+python -m tests.test_parsers
+
+
+Run without LLM (offline / quota-free):
+
+$env:USE_LLM="false"
+python -m tests.test_parsers
+
+
+This allows:
+
+Stable local testing
+
+Reproducible results
+
+Easy demos even without API access
+
 > Note: This repository is private as per Pitcrew submission guidelines.
 > Code access is provided to reviewers via GitHub collaborator invite.
