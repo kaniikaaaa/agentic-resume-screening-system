@@ -58,6 +58,36 @@ Structured Resume Structured JD
 
 
 ---
+## Skill Extraction Strategy
+
+Currently, skill extraction is implemented using a rule-based keyword matching approach.
+This decision was made intentionally to keep the system:
+
+- Deterministic
+- Fast
+- Easy to debug
+- Fully explainable
+
+Instead of relying on black-box LLM outputs, the system uses predefined skill vocabularies
+for both resumes and job descriptions. This ensures transparency in how matches are calculated.
+
+In future versions, this can be enhanced using:
+- LLM-based extraction (Gemini / GPT)
+- Resume embeddings for semantic similarity
+- Context-aware skill normalization
+
+## Testing Strategy
+
+The system is tested using real resumes and job descriptions across multiple scenarios:
+
+- Strong backend candidate vs standard backend JD  
+- Frontend candidate vs backend JD (expected rejection)  
+- Junior / career switcher candidate vs junior JD  
+- Strong candidate vs vague JD (expected human review)
+
+Each test runs the full agent pipeline through the Orchestrator to ensure all agents
+collaborate correctly and produce explainable outputs.
+
 
 ## Agents and Responsibilities
 
@@ -244,3 +274,6 @@ Human-in-the-loop design
 Transparent decision-making
 
 Which directly aligns with Pitcrew’s philosophy of explainable, trustworthy AI systems.
+
+> Note: This repository is private as per Pitcrew submission guidelines.
+> Code access is provided to reviewers via GitHub collaborator invite.
