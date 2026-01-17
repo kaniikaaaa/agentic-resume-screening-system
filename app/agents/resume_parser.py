@@ -1,44 +1,31 @@
-import pdfplumber
-import re
+from app.services.llm_service import LLMService
+import json
 
 class ResumeParserAgent:
-    def extract_text_from_pdf(self, pdf_path: str) -> str:
-        text = ""
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
-        return text.lower()
+    def __init__(self):
+        self.llm = LLMService()
 
-    def extract_skills(self, text: str):
-        skill_keywords = [
-            "python", "django", "fastapi", "flask", "postgresql", "mysql",
-            "redis", "docker", "aws", "git", "ci/cd", "rest", "microservices",
-            "kafka", "rabbitmq"
-        ]
+    def parse(self, resume_text: str):
+        try:
+            llm_output = self.llm.extract_resume_info(resume_text)
 
-        found = []
-        for skill in skill_keywords:
-            if skill in text:
-                found.append(skill)
+            print("\n===== LLM RAW OUTPUT (RESUME) =====")
+            print(llm_output)
 
-        return list(set(found))
+            data = json.loads(llm_output)
 
-    def extract_experience_years(self, text: str):
-        match = re.search(r"(\d+)\+?\s*years", text)
-        if match:
-            return int(match.group(1))
-        return 0
+            if not data.get("skills"):
+                raise ValueError("LLM returned empty skills")
 
-    def parse(self, pdf_path: str):
-        resume_text = self.extract_text_from_pdf(pdf_path)
+            data["source"] = "LLM"
+            return data
 
-        skills = self.extract_skills(resume_text)
-        experience = self.extract_experience_years(resume_text)
+        except Exception as e:
+            print("\n⚠️ LLM FAILED, FALLING BACK TO RULE-BASED:", e)
 
-        return {
-            "skills": skills,
-            "experience_years": experience,
-            "raw_text": resume_text[:500]
-        }
+            return {
+                "skills": [],
+                "experience_years": 0,
+                "projects": [],
+                "source": "rule_based_fallback"
+            }

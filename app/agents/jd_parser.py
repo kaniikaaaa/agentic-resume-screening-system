@@ -1,45 +1,35 @@
-import re
+from app.services.llm_service import LLMService
+import json
 
 class JDParserAgent:
-    def parse(self, jd_path: str):
-        with open(jd_path, "r", encoding="utf-8") as f:
-            text = f.read().lower()
+    def __init__(self):
+        self.llm = LLMService()
 
-        skills = self.extract_skills(text)
-        experience = self.extract_experience(text)
+    def parse(self, jd_text: str):
+        try:
+            llm_output = self.llm.extract_jd_info(jd_text)
 
-        return {
-            "required_skills": skills,
-            "experience_required": experience,
-            "raw_text": text[:500]
-        }
+            print("\n===== LLM RAW OUTPUT (JD) =====")
+            print(llm_output)
 
-    def extract_skills(self, text: str):
-        skill_keywords = [
-            "python", "django", "fastapi", "postgresql", "sql", "git",
-            "docker", "aws", "redis", "kafka", "microservices"
-        ]
+            data = json.loads(llm_output)
 
-        found = []
-        for skill in skill_keywords:
-            if skill in text:
-                found.append(skill)
+            # If required_skills empty, treat JD as vague, NOT as failure
+            if not data.get("required_skills"):
+                data["jd_clarity"] = "vague"
+                data["source"] = "LLM"
+                return data
 
-        return list(set(found))
+            # Normal case
+            data["source"] = "LLM"
+            return data
 
-    def extract_experience(self, text: str):
-        match = re.search(r"(\d+)\s*-\s*(\d+)\s*years", text)
-        if match:
+        except Exception as e:
+            print("\n⚠️ LLM FAILED, FALLING BACK TO RULE-BASED:", e)
+
             return {
-                "min": int(match.group(1)),
-                "max": int(match.group(2))
+                "required_skills": [],
+                "experience_required": None,
+                "jd_clarity": "vague",
+                "source": "rule_based_fallback"
             }
-
-        match = re.search(r"(\d+)\+\s*years", text)
-        if match:
-            return {
-                "min": int(match.group(1)),
-                "max": None
-            }
-
-        return None
