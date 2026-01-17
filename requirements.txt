@@ -11,4 +11,5 @@ uvicorn
 pydantic
 python-multipart
 langchain
+pdfplumber
 
