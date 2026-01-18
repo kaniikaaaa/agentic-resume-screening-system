@@ -1,6 +1,20 @@
-from app.orchestrator import Orchestrator
+import os
+from dotenv import load_dotenv
 
-orchestrator = Orchestrator()
+# Load .env file
+load_dotenv()
+
+# Toggle between original and LangGraph orchestrator
+USE_LANGGRAPH = os.getenv("USE_LANGGRAPH", "true").lower() == "true"
+
+if USE_LANGGRAPH:
+    from app.graph_orchestrator import GraphOrchestrator
+    orchestrator = GraphOrchestrator()
+    print("Using LangGraph Orchestrator")
+else:
+    from app.orchestrator import Orchestrator
+    orchestrator = Orchestrator()
+    print("Using Original Orchestrator")
 
 test_cases = [
     {

@@ -3,7 +3,7 @@ class DecisionAgent:
         skill_score = skill_result["score"]          # 0–100
         exp_score = experience_result["score"]       # 0–100
 
-        # Weighted final score (skills > experience thoda zyada important)
+        # Weighted final score (skills weighted slightly higher than experience)
         final_score = (0.6 * skill_score) + (0.4 * exp_score)
         final_score = round(final_score, 2)
 

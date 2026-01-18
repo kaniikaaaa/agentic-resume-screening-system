@@ -1,355 +1,190 @@
 # Agentic Resume Screening System
 
-An AI-powered, agentic backend system that evaluates candidate resumes against job descriptions, explains its reasoning, and recommends the next hiring action.  
-This project is built as a response to the Pitcrew Backend Engineering Assignment and focuses on clarity of thought, explainability, and multi-agent design rather than UI or deployment.
+AI-powered multi-agent system that evaluates resumes against job descriptions and recommends hiring actions with clear reasoning.
 
----
+## Quick Start
 
-## Problem Statement
+```bash
+git clone <repo-url>
+cd agentic-resume-screening-system
+python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 
-Hiring teams receive hundreds of resumes per role. Manually screening them is slow and inconsistent.  
-This system acts like a “hiring committee” made of multiple agents, where each agent specializes in one task:
+# Setup environment (optional - works without API key using rule-based fallback)
+cp .env.example .env
+# Edit .env and add your GEMINI_API_KEY (free from https://aistudio.google.com/apikey)
 
-- Reading resumes  
-- Understanding job requirements  
-- Comparing skills  
-- Evaluating experience  
-- Making decisions  
-- Explaining reasoning  
-
-Instead of a single monolithic function, decisions emerge from collaboration between agents.
+# Run
+python -m tests.test_parsers
+```
 
 ---
 
 ## Architecture Overview
 
- ┌─────────────────────┐
-            │     Orchestrator    │
-            └─────────┬───────────┘
-                      │
-    ┌─────────────────┼─────────────────┐
-    │                 │                 │
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ ResumeParser │ │ JDParser │ │ Error Handling │
-│ Agent │ │ Agent │ │ & Validation │
-└────────┬────────┘ └────────┬────────┘ └─────────────────┘
-│ │
-▼ ▼
-Structured Resume Structured JD
-│ │
-└────────────┬──────┘
-▼
-┌─────────────────┐
-│ SkillMatchAgent │
-└────────┬────────┘
-▼
-┌────────────────────┐
-│ ExperienceAgent │
-└────────┬───────────┘
-▼
-┌────────────────────┐
-│ DecisionAgent │
-└────────┬───────────┘
-▼
-┌────────────────────┐
-│ ExplanationAgent │
-└────────┬───────────┘
-▼
+```
+Input: Resume (PDF/DOCX) + Job Description (TXT)
+                    │
+                    ▼
+            ┌───────────────┐
+            │  Orchestrator │ (LangGraph)
+            └───────┬───────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+┌───────────────┐       ┌───────────────┐
+│ ResumeParser  │       │   JDParser    │
+└───────┬───────┘       └───────┬───────┘
+        │                       │
+        └───────────┬───────────┘
+                    ▼
+            ┌───────────────┐
+            │  SkillMatch   │
+            └───────┬───────┘
+                    ▼
+            ┌───────────────┐
+            │  Experience   │
+            └───────┬───────┘
+                    ▼
+            ┌───────────────┐
+            │   Decision    │──── Vague JD? ────► Human Review
+            │               │──── Low Conf? ────► Human Review
+            └───────┬───────┘
+                    ▼
+            ┌───────────────┐
+            │  Explanation  │
+            └───────┬───────┘
+                    ▼
+            Final JSON Output
+```
 
-
----
-## Skill Extraction Strategy
-
-Currently, skill extraction is implemented using a rule-based keyword matching approach.
-This decision was made intentionally to keep the system:
-
-- Deterministic
-- Fast
-- Easy to debug
-- Fully explainable
-
-Instead of relying on black-box LLM outputs, the system uses predefined skill vocabularies
-for both resumes and job descriptions. This ensures transparency in how matches are calculated.
-
-In future versions, this can be enhanced using:
-- LLM-based extraction (Gemini / GPT)
-- Resume embeddings for semantic similarity
-- Context-aware skill normalization
-
-## Testing Strategy
-
-The system is tested using real resumes and job descriptions across multiple scenarios:
-
-- Strong backend candidate vs standard backend JD  
-- Frontend candidate vs backend JD (expected rejection)  
-- Junior / career switcher candidate vs junior JD  
-- Strong candidate vs vague JD (expected human review)
-
-Each test runs the full agent pipeline through the Orchestrator to ensure all agents
-collaborate correctly and produce explainable outputs.
-
-
-## Agents and Responsibilities
-
-| Agent Name | Responsibility |
-|------------|---------------|
-| ResumeParserAgent | Reads resume PDFs and extracts raw text, skills, and experience |
-| JDParserAgent | Reads job descriptions and extracts required skills and experience ranges |
-| SkillMatchAgent | Compares resume skills with JD requirements |
-| ExperienceAgent | Evaluates candidate experience against JD experience |
-| DecisionAgent | Combines skill and experience scores to make a hiring decision |
-| ExplanationAgent | Generates human-readable reasoning |
-| Orchestrator | Coordinates all agents and produces final output |
+**Decision Points:**
+- Vague JD detected → routes to manual review
+- Low confidence score → flags for human review
+- Experience mismatch → different recommendation path
 
 ---
 
-## Agentic Design Philosophy
+## Agent Design
 
-This system is agentic because:
-
-- Each agent has a **single clear responsibility**
-- Agents **pass structured data** to one another
-- Decisions are made at multiple intermediate stages
-- The system handles uncertainty and flags cases for human review
-- State evolves as the pipeline progresses
-
-What we avoided:
-
-- One giant function doing everything
-- One massive LLM prompt
-- A blind linear pipeline with no branching
-- Keyword-only matching without reasoning
+| Agent | Responsibility | State Passed |
+|-------|----------------|--------------|
+| **ResumeParser** | Extract skills, experience from PDF/DOCX | `{skills, experience_years, projects}` |
+| **JDParser** | Extract requirements from JD | `{required_skills, experience_required, jd_clarity}` |
+| **SkillMatch** | Compare candidate skills vs JD | `{score, matched_skills, missing_skills}` |
+| **Experience** | Evaluate experience fit | `{score, status, reason}` |
+| **Decision** | Make hiring recommendation | `{recommendation, confidence, requires_human}` |
+| **Explanation** | Generate human-readable reasoning | `{reasoning_summary}` |
 
 ---
 
-## Input
+## Prompt Design
 
-1. Resume  
-   - Format: PDF  
-   - Example: `resume_01_priya_sharma.pdf`
+We use two focused LLM prompts rather than one massive prompt:
 
-2. Job Description  
-   - Format: TXT  
-   - Example: `jd_01_backend_python_standard.txt`
+**Resume Extraction Prompt:**
+```
+You are an AI recruiter assistant.
+Extract structured data from the resume below.
+Return ONLY valid JSON: {skills: [], experience_years: N, projects: []}
+```
+
+**JD Extraction Prompt:**
+```
+You are an AI recruiter assistant.
+Extract structured data from the job description below.
+Return ONLY valid JSON: {required_skills: [], experience_required: {min, max}, jd_clarity: "clear"|"vague"}
+```
+
+**Why this design:**
+- Separate prompts = easier debugging and iteration
+- Strict JSON output = reliable parsing
+- "ONLY valid JSON" = reduces hallucinated text
+- Clear role ("recruiter assistant") = focused responses
 
 ---
 
-## Output (Pitcrew Format)
+## Sample Outputs
 
+**Strong Candidate + Standard JD:**
 ```json
 {
-  "match_score": 0.94,
+  "match_score": 0.96,
   "recommendation": "Proceed to interview",
   "requires_human": false,
   "confidence": 0.9,
-  "reasoning_summary": "Strong skill alignment. Candidate matches most required skills such as python, django, fastapi, postgresql. Candidate experience (3 years) matches JD range (2-4 years)."
+  "reasoning_summary": "Strong skill alignment. Candidate matches most required skills such as celery, fastapi, django. Candidate experience (3 years) matches JD range (2-4 years)"
 }
+```
 
-| Field             | Meaning                               |
-| ----------------- | ------------------------------------- |
-| match_score       | Overall match from 0.0 to 1.0         |
-| recommendation    | Hiring action                         |
-| requires_human    | Whether recruiter should double-check |
-| confidence        | How confident the system is           |
-| reasoning_summary | Explainable decision rationale        |
-
-How Agents Pass State
-
-ResumeParserAgent → resume_data
-
+**Weak Candidate + Standard JD:**
+```json
 {
-  "skills": [...],
-  "experience_years": 3,
-  "raw_text": "..."
-}
-
-
-JDParserAgent → jd_data
-
-{
-  "required_skills": [...],
-  "experience_required": {"min": 2, "max": 4}
-}
-
-
-SkillMatchAgent → skill_result
-
-{
-  "score": 90,
-  "matched_skills": [...],
-  "missing_skills": [...]
-}
-
-
-ExperienceAgent → experience_result
-
-{
-  "score": 100,
-  "status": "Perfect Fit",
-  "reason": "Candidate experience (3 years) matches JD range (2-4 years)"
-}
-
-
-DecisionAgent → decision_result
-
-{
-  "final_score": 94.0,
-  "match_score": 0.94,
-  "recommendation": "Proceed to interview",
+  "match_score": 0.65,
+  "recommendation": "Reject",
   "requires_human": false,
-  "confidence": 0.9
+  "confidence": 0.75,
+  "reasoning_summary": "Weak skill match. Candidate is missing many core skills like celery, restful, microservices."
 }
+```
 
+**Any Candidate + Vague JD:**
+```json
+{
+  "match_score": 0.0,
+  "recommendation": "Manual Review Required",
+  "requires_human": true,
+  "confidence": 0.3,
+  "reasoning_summary": "Job description is too vague to make an automated decision. Missing clear technical requirements."
+}
+```
 
-ExplanationAgent → reasoning_summary
+---
 
-| Scenario              | System Behavior          |
-| --------------------- | ------------------------ |
-| Vague JD              | Manual Review Required   |
-| Junior candidate      | Needs manual review      |
-| Parsing failure       | Graceful error handling  |
-| Low confidence cases  | Human-in-the-loop        |
-| Overconfident scoring | Avoided using thresholds |
+## Error Handling
 
-Why Rule-Based First?
+| Scenario | Behavior |
+|----------|----------|
+| File not found | Returns error with `requires_human: true` |
+| Unsupported format | Returns error explaining supported formats |
+| PDF parse failure | Graceful error, flags for human review |
+| Vague JD | Routes to manual review (not a failure) |
+| LLM fails/quota | Falls back to rule-based extraction |
 
-Trade-offs:
+---
 
-Deterministic
+## Trade-offs & Assumptions
 
-Easy to debug
+**What we chose:**
+- **Rule-based fallback** over LLM-only: Ensures system always works, even offline
+- **Exact skill matching** over semantic: Simpler, debuggable, no vector DB needed
+- **LangGraph** for orchestration: Conditional routing, clean state management
+- **Single resume** focus: Clarity over batch processing for MVP
 
-Explainable
+**What we skipped:**
+- Semantic skill matching (would need embeddings + vector DB)
+- Resume similarity scoring
+- API endpoints (FastAPI scaffold exists but not wired)
 
-Fast execution
+---
 
-No dependency on paid APIs
+## Future Improvements
 
-With more time:
+1. **Semantic Skill Matching**: Embeddings to match "ReactJS" with "React"
+2. **Batch Processing**: Multiple resumes in parallel
+3. **Confidence Calibration**: Learn from recruiter feedback
+4. **REST API**: Wire up FastAPI endpoints
 
-Use LLMs (Gemini/OpenAI) for extraction
+---
 
-Use embeddings for semantic skill matching
+## Environment Variables
 
-Resume similarity scoring
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GEMINI_API_KEY` | - | Google Gemini API key (optional) |
+| `USE_LLM` | `true` | Set `false` to force rule-based mode |
+| `USE_LANGGRAPH` | `true` | Set `false` to use original orchestrator |
 
-Feedback loop from recruiter decisions
+---
 
-Setup Instructions
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python -m tests.test_parsers
-
-Sample Scenarios Covered
-Case	Behavior
-Strong backend candidate	Auto-approve
-Frontend candidate	Reject
-Career switcher	Human review
-Vague JD	Manual review
-Future Improvements
-
-LLM-powered parsing
-
-Resume embeddings + vector similarity
-
-Batch resume processing
-
-Web UI dashboard
-
-Confidence calibration using historical data
-
-Final Thoughts
-
-This system prioritizes:
-
-Clear reasoning
-
-Multi-agent collaboration
-
-Cautious automation
-
-Human-in-the-loop design
-
-Transparent decision-making
-
-Which directly aligns with Pitcrew’s philosophy of explainable, trustworthy AI systems.
-
-🔁 LLM Execution Modes (Hybrid Design)
-
-This system supports two execution modes:
-
-LLM Mode (Default)
-
-Uses Gemini LLM for semantic understanding of resumes and job descriptions.
-
-Provides intelligent extraction of skills, experience, and requirements.
-
-Activated when:
-
-USE_LLM=true
-
-
-Deterministic Mode (Fallback)
-
-Uses rule-based parsing when:
-
-LLM quota is exhausted
-
-API is unavailable
-
-LLM returns invalid responses
-
-Ensures system never crashes and always produces output.
-
-Activated when:
-
-USE_LLM=false
-
-
-This hybrid design ensures reliability, stability, and explainability.
-
-🧠 Quota & Failure Safe Design
-
-The system is designed to gracefully handle:
-
-API quota exhaustion (429 errors)
-
-Network failures
-
-Invalid LLM JSON responses
-
-In such cases:
-
-The pipeline automatically switches to deterministic mode
-
-Hiring decisions are still produced
-
-Human-in-the-loop is triggered when uncertainty exists
-
-This matches real-world AI backend reliability standards.
-
-🧪 Testing in Both Modes
-
-Run with LLM:
-
-$env:USE_LLM="true"
-python -m tests.test_parsers
-
-
-Run without LLM (offline / quota-free):
-
-$env:USE_LLM="false"
-python -m tests.test_parsers
-
-
-This allows:
-
-Stable local testing
-
-Reproducible results
-
-Easy demos even without API access
-
-> Note: This repository is private as per Pitcrew submission guidelines.
-> Code access is provided to reviewers via GitHub collaborator invite.
+> This repository is private per Pitcrew guidelines. Reviewer access via @pitcrew-hiring collaborator.

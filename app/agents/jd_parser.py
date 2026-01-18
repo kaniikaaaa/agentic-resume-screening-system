@@ -1,16 +1,58 @@
-from app.services.llm_service import LLMService
 import json
+import logging
+
+from app.services.llm_service import LLMService
+from app.services.skill_extractor import extract_skills_from_text, extract_experience_requirement
+
+logger = logging.getLogger(__name__)
+
 
 class JDParserAgent:
+    """Agent for parsing job description text and extracting requirements."""
+
     def __init__(self):
         self.llm = LLMService()
 
-    def parse(self, jd_text: str):
+    def _rule_based_parse(self, jd_text: str) -> dict:
+        """
+        Fallback parsing using rule-based extraction.
+
+        Args:
+            jd_text: Raw job description text
+
+        Returns:
+            Structured JD data
+        """
+        skills = extract_skills_from_text(jd_text)
+        experience_req = extract_experience_requirement(jd_text)
+
+        # If no skills found, mark as vague
+        jd_clarity = "clear" if skills else "vague"
+
+        return {
+            "required_skills": skills,
+            "experience_required": experience_req,
+            "jd_clarity": jd_clarity,
+            "source": "rule_based"
+        }
+
+    def parse(self, jd_text: str) -> dict:
+        """
+        Parse job description to extract required skills and experience.
+
+        Attempts LLM-based extraction first, falls back to rule-based
+        extraction if LLM fails or is unavailable.
+
+        Args:
+            jd_text: Raw job description text
+
+        Returns:
+            Dict with required_skills, experience_required, jd_clarity, and source
+        """
         try:
             llm_output = self.llm.extract_jd_info(jd_text)
 
-            print("\n===== LLM RAW OUTPUT (JD) =====")
-            print(llm_output)
+            logger.debug("LLM raw output (JD): %s", llm_output)
 
             data = json.loads(llm_output)
 
@@ -25,11 +67,6 @@ class JDParserAgent:
             return data
 
         except Exception as e:
-            print("\n⚠️ LLM FAILED, FALLING BACK TO RULE-BASED:", e)
+            logger.warning("LLM failed, falling back to rule-based parsing: %s", e)
 
-            return {
-                "required_skills": [],
-                "experience_required": None,
-                "jd_clarity": "vague",
-                "source": "rule_based_fallback"
-            }
+            return self._rule_based_parse(jd_text)

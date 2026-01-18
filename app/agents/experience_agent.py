@@ -4,7 +4,7 @@ class ExperienceAgent:
 
         exp_req = jd_data.get("experience_required")
 
-        # JD me experience define hi nahi hai ya vague hai
+        # JD does not define experience requirement or it's vague
         if not exp_req or exp_req.get("min") is None:
             return {
                 "score": 50,
