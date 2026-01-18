@@ -22,46 +22,53 @@ python -m tests.test_parsers
 
 ## Architecture Overview
 
-```
-Input: Resume (PDF/DOCX) + Job Description (TXT)
-                    │
-                    ▼
-            ┌───────────────┐
-            │  Orchestrator │ (LangGraph)
-            └───────┬───────┘
-                    │
-        ┌───────────┴───────────┐
-        ▼                       ▼
-┌───────────────┐       ┌───────────────┐
-│ ResumeParser  │       │   JDParser    │
-└───────┬───────┘       └───────┬───────┘
-        │                       │
-        └───────────┬───────────┘
-                    ▼
-            ┌───────────────┐
-            │  SkillMatch   │
-            └───────┬───────┘
-                    ▼
-            ┌───────────────┐
-            │  Experience   │
-            └───────┬───────┘
-                    ▼
-            ┌───────────────┐
-            │   Decision    │──── Vague JD? ────► Human Review
-            │               │──── Low Conf? ────► Human Review
-            └───────┬───────┘
-                    ▼
-            ┌───────────────┐
-            │  Explanation  │
-            └───────┬───────┘
-                    ▼
-            Final JSON Output
+```mermaid
+flowchart TD
+    subgraph Input
+        A[Resume PDF/DOCX]
+        B[Job Description TXT]
+    end
+
+    A --> C[Orchestrator<br/>LangGraph]
+    B --> C
+
+    C --> D[ResumeParser]
+    C --> E[JDParser]
+
+    D --> F{JD Clear?}
+    E --> F
+
+    F -->|No| G[Manual Review Required]
+    F -->|Yes| H[SkillMatch Agent]
+
+    H --> I[Experience Agent]
+    I --> J[Decision Agent]
+
+    J --> K{Confidence Check}
+    K -->|Low < 0.4| G
+    K -->|OK| L[Explanation Agent]
+
+    L --> M[Final JSON Output]
+    G --> N[Human Review Output]
+
+    style G fill:#ffcccc
+    style N fill:#ffcccc
+    style M fill:#ccffcc
+    style C fill:#e6f3ff
+    style D fill:#fff2cc
+    style E fill:#fff2cc
+    style H fill:#fff2cc
+    style I fill:#fff2cc
+    style J fill:#fff2cc
+    style L fill:#fff2cc
 ```
 
-**Decision Points:**
-- Vague JD detected → routes to manual review
-- Low confidence score → flags for human review
-- Experience mismatch → different recommendation path
+**Decision Points (Conditional Routing):**
+| Condition | Route | Rationale |
+|-----------|-------|-----------|
+| Vague JD detected | → Manual Review | Can't score without clear requirements |
+| Confidence < 0.4 | → Manual Review | System is uncertain, needs human judgment |
+| Experience mismatch | → Flagged in output | Over/under-qualified noted in reasoning |
 
 ---
 
@@ -106,36 +113,72 @@ Return ONLY valid JSON: {required_skills: [], experience_required: {min, max}, j
 
 ## Sample Outputs
 
-**Strong Candidate + Standard JD:**
+### LLM Mode (with GEMINI_API_KEY)
+
+**Strong Backend Candidate + Backend Python JD:**
 ```json
 {
   "match_score": 0.96,
   "recommendation": "Proceed to interview",
   "requires_human": false,
   "confidence": 0.9,
-  "reasoning_summary": "Strong skill alignment. Candidate matches most required skills such as celery, fastapi, django. Candidate experience (3 years) matches JD range (2-4 years)"
+  "reasoning_summary": "Strong skill alignment. Candidate matches most required skills such as celery, fastapi, django. Candidate experience (3 years) matches JD range (2-4 years)",
+  "data_source": "LLM"
 }
 ```
 
-**Weak Candidate + Standard JD:**
+**Data Analyst (Transitioning) + Backend Python JD:**
+```json
+{
+  "match_score": 0.52,
+  "recommendation": "Reject",
+  "requires_human": false,
+  "confidence": 0.75,
+  "reasoning_summary": "Weak skill match. Candidate is missing many core skills like django, fastapi, rest apis, microservices. Experience in data analysis, not backend development.",
+  "data_source": "LLM"
+}
+```
+
+### Rule-Based Fallback Mode (no API key or quota exceeded)
+
+When LLM is unavailable, the system uses keyword extraction:
+
+**Strong Candidate (rule-based):**
+```json
+{
+  "match_score": 0.96,
+  "recommendation": "Proceed to interview",
+  "requires_human": false,
+  "confidence": 0.9,
+  "reasoning_summary": "Strong skill alignment. Candidate matches most required skills such as celery, rest, fastapi, ci/cd. Candidate experience (3 years) matches JD range (2-4 years)",
+  "data_source": "rule_based"
+}
+```
+
+**Weak Candidate (rule-based):**
 ```json
 {
   "match_score": 0.65,
   "recommendation": "Reject",
   "requires_human": false,
   "confidence": 0.75,
-  "reasoning_summary": "Weak skill match. Candidate is missing many core skills like celery, restful, microservices."
+  "reasoning_summary": "Weak skill match. Candidate is missing many core skills like rabbitmq, fastapi, ci/cd. Candidate experience (2 years) matches JD range (2-4 years)",
+  "data_source": "rule_based"
 }
 ```
 
-**Any Candidate + Vague JD:**
+> **Note:** Rule-based mode extracts skills via keyword matching. It works well for technical skills but may miss nuanced context that LLM mode captures.
+
+### Vague JD (Both Modes)
+
 ```json
 {
   "match_score": 0.0,
   "recommendation": "Manual Review Required",
   "requires_human": true,
   "confidence": 0.3,
-  "reasoning_summary": "Job description is too vague to make an automated decision. Missing clear technical requirements."
+  "reasoning_summary": "Job description is too vague to make an automated decision. Missing clear technical requirements.",
+  "data_source": "rule_based"
 }
 ```
 
@@ -168,12 +211,51 @@ Return ONLY valid JSON: {required_skills: [], experience_required: {min, max}, j
 
 ---
 
-## Future Improvements
+## Future Improvements (What I'd Do With More Time)
 
-1. **Semantic Skill Matching**: Embeddings to match "ReactJS" with "React"
-2. **Batch Processing**: Multiple resumes in parallel
-3. **Confidence Calibration**: Learn from recruiter feedback
-4. **REST API**: Wire up FastAPI endpoints
+### High Priority
+
+1. **Semantic Skill Matching**
+   - Use embeddings (e.g., sentence-transformers) to match "ReactJS" → "React", "Postgres" → "PostgreSQL"
+   - Would eliminate false negatives from synonym/alias differences
+   - Could use a lightweight vector similarity instead of exact string matching
+
+2. **Context-Aware Skill Extraction**
+   - Distinguish "Python for data analysis" vs "Python for backend development"
+   - Weight skills by recency and depth of experience (mentioned in 3 jobs vs 1)
+   - Extract skill proficiency levels from context clues
+
+3. **REST API Endpoints**
+   - Wire up the FastAPI scaffold for integration with ATS systems
+   - Endpoints: `POST /screen` (single resume), `POST /batch` (multiple)
+   - Add authentication and rate limiting
+
+### Medium Priority
+
+4. **Batch Processing**
+   - Process multiple resumes in parallel against same JD
+   - Rank candidates by match score
+   - Export to CSV/JSON for recruiter review
+
+5. **Confidence Calibration**
+   - Store recruiter decisions (interview → hired/rejected)
+   - Use feedback loop to adjust scoring thresholds
+   - Track false positive/negative rates over time
+
+6. **Enhanced Explainability**
+   - Side-by-side comparison: "JD asks for X, candidate has Y"
+   - Skill gap visualization
+   - Suggested interview questions based on gaps
+
+### Nice to Have
+
+7. **Multi-Language Resume Support**
+   - Currently assumes English resumes
+   - Add language detection and translation layer
+
+8. **Resume Quality Scoring**
+   - Flag resumes with formatting issues, missing sections
+   - Suggest improvements to candidates
 
 ---
 
