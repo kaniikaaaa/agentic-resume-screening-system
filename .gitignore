@@ -11,6 +11,9 @@ node_modules/
 next-env.d.ts
 *.tsbuildinfo
 
+# static export, built by the Dockerfile for single-origin hosting
+out/
+
 # env
 .env
 .env.local

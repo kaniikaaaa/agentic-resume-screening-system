@@ -1,0 +1,25 @@
+# Render Blueprint. Point Render at this repo and it reads this file:
+# https://render.com/docs/blueprint-spec
+#
+# One web service. The Dockerfile builds the interface and serves it from the
+# same origin as the API, so there is no second service and no CORS.
+
+services:
+  - type: web
+    name: quorum
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/py/health
+    envVars:
+      # Set this in the Render dashboard, not here. Without it the app runs
+      # deterministically rather than failing.
+      - key: GEMINI_API_KEY
+        sync: false
+
+      - key: USE_LLM
+        value: "true"
+
+      # "graph" swaps in the LangGraph route with conditional routing.
+      - key: ORCHESTRATOR
+        value: linear

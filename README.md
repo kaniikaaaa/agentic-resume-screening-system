@@ -4,8 +4,8 @@ A panel of specialised agents reads a resume against a job description, scores
 the match, shows its working, and hands the case to a human when it shouldn't be
 the one deciding.
 
-Next.js front end, FastAPI agent pipeline, both deployed to Vercel as one
-project.
+Next.js front end, FastAPI agent pipeline. Deploys to Render as a single Docker
+service, or to Vercel as a Next.js app plus a Python function.
 
 ---
 
@@ -113,7 +113,46 @@ python -m pytest tests/   # 47 tests, no API key needed
 
 ---
 
-## Deploying to Vercel
+## Deploying
+
+Two supported targets. They differ only in how the interface reaches the API.
+
+| | Render | Vercel |
+|---|---|---|
+| Shape | one Docker web service | Next.js + a Python serverless function |
+| Interface | static export, served by FastAPI | served by Next |
+| API reached via | same origin, no rewrite | `next.config.mjs` rewrite |
+| Config | [`render.yaml`](render.yaml), [`Dockerfile`](Dockerfile) | [`vercel.json`](vercel.json) |
+
+### Render
+
+Render has no serverless functions, and its native Python runtime has no Node,
+so the [`Dockerfile`](Dockerfile) builds the interface in a Node stage, exports
+it to static files, and copies just those into a Python image. FastAPI then
+serves the interface and the API from **one origin** — no second service, no
+CORS.
+
+1. Push to GitHub.
+2. Render → **New** → **Blueprint** → pick this repo. It reads `render.yaml`
+   and needs nothing else. (Or **New → Web Service** → Runtime **Docker**.)
+3. *(Optional)* Add `GEMINI_API_KEY` under **Environment**. Without it the
+   service runs deterministically rather than failing.
+
+Health check is wired to `/api/py/health`.
+
+> On Render's **free** plan the service sleeps after ~15 minutes idle, so the
+> first request afterwards takes ~50s while it wakes. The screening itself is
+> unaffected. A paid instance doesn't sleep.
+
+Run the exact production image locally:
+
+```bash
+docker build -t quorum .
+docker run --rm -p 8000:8000 -e GEMINI_API_KEY=... quorum
+# http://localhost:8000
+```
+
+### Vercel
 
 The repo is already configured — Next.js and the Python function deploy together
 as one project.
@@ -200,7 +239,11 @@ recommendation fell where it did rather than taking it on faith.
 app/            Next.js App Router — the interface
 components/     Masthead, Intake, Verdict, Trace
 lib/            shared types, the agent roster, sample fixtures
-api/index.py    FastAPI entry — the Vercel serverless function
+api/index.py    FastAPI entry — serverless function on Vercel, and the
+                whole server (interface included) on Render
+Dockerfile      Node build stage -> Python runtime, for Render
+render.yaml     Render Blueprint
+vercel.json     Vercel function config
 screening/      the agent pipeline (imported by api/index.py)
   agents/       one file per agent
   services/     Gemini client, document extraction, skill taxonomy

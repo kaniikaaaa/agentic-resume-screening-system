@@ -1,0 +1,19 @@
+# Keep the build context small and the image reproducible: everything the
+# image needs is either installed from a lockfile or built in the Node stage.
+node_modules
+.next
+out
+venv
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.git
+.github
+.vercel
+.env
+.env.local
+tests
+README.md
+vercel.json
+*.md

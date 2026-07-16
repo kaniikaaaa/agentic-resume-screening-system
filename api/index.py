@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from screening import config
 from screening.services.documents import (
@@ -110,3 +111,19 @@ async def screen(
         ) from exc
 
     return JSONResponse(result)
+
+
+# Single-origin hosting (Render, Docker, anywhere that isn't Vercel): the
+# interface is exported to out/ at build time and served from here, so the
+# front end reaches /api/py/* directly with no rewrite in between.
+#
+# Mounted last on purpose. A mount at "/" swallows every path, and routes match
+# in registration order — the API endpoints above must be claimed first.
+#
+# On Vercel out/ never exists: Next serves the interface itself and this
+# function only ever handles /api/py/*.
+_WEB_ROOT = Path(__file__).resolve().parent.parent / "out"
+
+if _WEB_ROOT.is_dir():
+    app.mount("/", StaticFiles(directory=_WEB_ROOT, html=True), name="web")
+    logging.info("Serving the interface from %s", _WEB_ROOT)
