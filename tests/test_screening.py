@@ -16,7 +16,7 @@ from screening.agents.experience_agent import ExperienceAgent
 from screening.agents.skill_match_agent import SkillMatchAgent
 from screening.orchestrator import Orchestrator
 from screening.services import taxonomy
-from screening.services.pdf import PDFExtractionError, extract_text_from_bytes
+from screening.services.documents import DocumentError, extract_text
 
 # The same fixtures the interface offers as samples — served from public/ so the
 # browser can fetch them, and read from disk here. One copy, not two.
@@ -165,17 +165,28 @@ def test_unknown_experience_forces_review():
     assert result["requires_human"] is True
 
 
-# ── pdf ───────────────────────────────────────────────────────────────
+# ── documents ─────────────────────────────────────────────────────────
 
 
-def test_non_pdf_is_rejected():
-    with pytest.raises(PDFExtractionError, match="not a PDF"):
-        extract_text_from_bytes(b"Just some text, not a PDF at all")
+def test_unsupported_file_is_rejected():
+    with pytest.raises(DocumentError, match="Unsupported"):
+        extract_text(b"Just some text, not a resume at all")
+
+
+def test_file_lying_about_being_a_pdf_is_rejected():
+    with pytest.raises(DocumentError, match="claims to be a PDF"):
+        extract_text(b"not really a pdf", "resume.pdf")
 
 
 def test_empty_upload_is_rejected():
-    with pytest.raises(PDFExtractionError):
-        extract_text_from_bytes(b"")
+    with pytest.raises(DocumentError):
+        extract_text(b"")
+
+
+def test_pdf_is_detected_by_content_not_extension():
+    with open(os.path.join(DATA, "resume_01_priya_sharma.pdf"), "rb") as f:
+        # Mislabelled on purpose: the magic number has to win.
+        assert "priya" in extract_text(f.read(), "resume.docx").lower()
 
 
 # ── end to end ────────────────────────────────────────────────────────

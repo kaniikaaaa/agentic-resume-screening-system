@@ -1,15 +1,20 @@
-"""Coordinates the agent pipeline and records what each agent did."""
+"""The linear orchestrator: all six agents, in order, every time.
+
+The default. `GraphOrchestrator` is the same panel with conditional routing —
+see ORCHESTRATOR in screening/config.py.
+"""
 
 import time
 
+from screening import result as result_shape
 from screening.agents.decision_agent import DecisionAgent
 from screening.agents.experience_agent import ExperienceAgent
 from screening.agents.explanation_agent import ExplanationAgent
 from screening.agents.jd_parser import JDParserAgent
 from screening.agents.resume_parser import ResumeParserAgent
 from screening.agents.skill_match_agent import SkillMatchAgent
+from screening.services.documents import extract_text_from_path
 from screening.services.llm_service import LLMService
-from screening.services.pdf import extract_text_from_bytes
 
 
 class Orchestrator:
@@ -36,6 +41,7 @@ class Orchestrator:
                 "duration_ms": round((time.perf_counter() - started) * 1000),
                 "source": output.get("source") if isinstance(output, dict) else None,
                 "note": output.get("note") if isinstance(output, dict) else None,
+                "status": "ok",
             })
             return output
 
@@ -68,48 +74,13 @@ class Orchestrator:
             )},
         )["text"]
 
-        sources = {resume_data.get("source"), jd_data.get("source")}
-        mode = "llm" if sources == {"llm"} else (
-            "rule_based" if sources == {"rule_based"} else "mixed"
+        return result_shape.shape(
+            resume_data, jd_data, skill_result, experience_result,
+            decision_result, explanation, trace,
         )
-
-        return {
-            # The contract the assignment specifies, unchanged.
-            "match_score": decision_result["match_score"],
-            "recommendation": decision_result["recommendation"],
-            "requires_human": decision_result["requires_human"],
-            "confidence": decision_result["confidence"],
-            "reasoning_summary": explanation,
-            # Everything below is what the interface renders.
-            "mode": mode,
-            "final_score": decision_result["final_score"],
-            # An escalation reports 0.0 because it declined to score, not
-            # because the candidate scored nothing. The interface needs to tell
-            # those apart or it will libel the candidate.
-            "scored": decision_result["reason"] is None,
-            "candidate": {
-                "skills": resume_data["skills"],
-                "experience_years": resume_data["experience_years"],
-                "projects": resume_data.get("projects", []),
-                "source": resume_data["source"],
-            },
-            "role": {
-                "required_skills": jd_data["required_skills"],
-                "experience_required": jd_data["experience_required"],
-                "clarity": jd_data["jd_clarity"],
-                "source": jd_data["source"],
-            },
-            "skill_match": skill_result,
-            "experience": experience_result,
-            "trace": trace,
-        }
 
     def run(self, resume_path: str, jd_path: str) -> dict:
         """Path-based entry point, kept for the local test suite."""
-        with open(resume_path, "rb") as f:
-            resume_text = extract_text_from_bytes(f.read())
-
+        resume_text = extract_text_from_path(resume_path)
         with open(jd_path, "r", encoding="utf-8") as f:
-            jd_text = f.read()
-
-        return self.run_from_text(resume_text, jd_text)
+            return self.run_from_text(resume_text, f.read())

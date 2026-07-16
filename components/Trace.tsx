@@ -29,7 +29,7 @@ export default function Trace({
           <div
             className={`${styles.step} ${
               step ? styles.done : active ? styles.running : styles.idle
-            }`}
+            } ${step?.status === "skipped" ? styles.skipped : ""}`}
             style={{ "--i": i } as React.CSSProperties}
           >
             <span className={styles.name}>{agent.name}</span>
@@ -46,7 +46,11 @@ export default function Trace({
                 </span>
               )}
               <span className={`num ${styles.ms}`}>
-                {step ? `${step.duration_ms} ms` : "—"}
+                {!step
+                  ? "—"
+                  : step.status === "skipped"
+                    ? "not run"
+                    : `${step.duration_ms} ms`}
               </span>
             </span>
           </div>

@@ -1,5 +1,9 @@
+import logging
+
 from screening.services.llm_service import LLMService
 from screening.services import taxonomy
+
+logger = logging.getLogger(__name__)
 
 
 class ResumeParserAgent:
@@ -26,6 +30,7 @@ class ResumeParserAgent:
                     "note": None,
                 }
             except Exception as exc:
+                logger.warning("Resume LLM parse failed, falling back to rules: %s", exc)
                 fallback = self._rule_based(resume_text)
                 fallback["note"] = f"Deterministic fallback used — {exc}"
                 return fallback

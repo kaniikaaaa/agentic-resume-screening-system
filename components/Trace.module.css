@@ -53,6 +53,27 @@
   border-color: var(--ink);
 }
 
+/* Routed around — the graph found nothing for this agent to do. */
+.skipped .name,
+.skipped .remit {
+  color: var(--ink-faint);
+}
+
+.skipped .name {
+  text-decoration: line-through;
+  text-decoration-color: var(--rule-strong);
+}
+
+.skipped::after {
+  background: var(--bone);
+  border-color: var(--rule-strong);
+  border-style: dashed;
+}
+
+.skipped .ms {
+  font-style: italic;
+}
+
 .name {
   min-width: 8.5rem;
   font-weight: 500;

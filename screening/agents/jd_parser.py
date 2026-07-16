@@ -1,5 +1,9 @@
+import logging
+
 from screening.services.llm_service import LLMService
 from screening.services import taxonomy
+
+logger = logging.getLogger(__name__)
 
 
 class JDParserAgent:
@@ -28,6 +32,7 @@ class JDParserAgent:
                     "note": None,
                 }
             except Exception as exc:
+                logger.warning("JD LLM parse failed, falling back to rules: %s", exc)
                 fallback = self._rule_based(jd_text)
                 fallback["note"] = f"Deterministic fallback used — {exc}"
                 return fallback

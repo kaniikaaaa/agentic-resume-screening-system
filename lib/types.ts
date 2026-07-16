@@ -8,6 +8,9 @@ export interface TraceStep {
   duration_ms: number;
   source: Source | null;
   note: string | null;
+  /** "skipped" only occurs under ORCHESTRATOR=graph, which routes around
+   *  agents that have nothing to do. */
+  status: "ok" | "skipped";
 }
 
 export interface SkillMatch {

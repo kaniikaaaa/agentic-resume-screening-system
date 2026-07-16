@@ -13,6 +13,13 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "models/gemini-flash-lite-latest").stri
 
 USE_LLM = _flag("USE_LLM") and bool(GEMINI_API_KEY)
 
+# "linear" runs all six agents in order. "graph" runs them through LangGraph
+# with conditional routing, so a vague role skips the matching agents entirely.
+# Linear is the default: langgraph pulls in a sizeable dependency tree, and
+# paying that import on every cold start is only worth it if you want the
+# routing.
+ORCHESTRATOR = os.getenv("ORCHESTRATOR", "linear").strip().lower()
+
 # Serverless functions bill by wall-clock, so the LLM gets a hard ceiling and a
 # single fast retry rather than the long sleep a local script could afford.
 LLM_TIMEOUT_SECONDS = float(os.getenv("LLM_TIMEOUT_SECONDS", "20"))

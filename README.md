@@ -28,6 +28,25 @@ produced it.
 The `Orchestrator` runs them in order and returns the intermediate outputs
 alongside the verdict, which is what the interface renders.
 
+### Two orchestrators
+
+| `ORCHESTRATOR` | Behaviour |
+|---|---|
+| `linear` *(default)* | All six agents, in order, every time. |
+| `graph` | The same panel wired as a LangGraph state graph, with conditional routing. |
+
+The graph route branches: a role too vague to match against **skips SkillMatch
+and Experience entirely** and goes straight to the escalation, because scoring a
+candidate against nothing is wasted work whose only output would be a number the
+`DecisionAgent` is about to discard. Skipped agents come back in the trace with
+`status: "skipped"`, and the interface strikes them through — the route the case
+took is visible, not buried.
+
+Both return the identical shape (see [`screening/result.py`](screening/result.py)),
+and a test asserts they reach the same verdict on every sample, so routing can
+never change the answer — only the work done to reach it. `linear` is the default
+because `langgraph` is a heavy import to pay for on every serverless cold start.
+
 ### The design decision that matters most
 
 **The system abstains rather than guessing.** A vague job description, or a
@@ -89,7 +108,7 @@ Open <http://localhost:3000>. The interface ships with sample candidates and
 roles, so it works on a cold start with nothing to upload.
 
 ```bash
-python -m pytest tests/   # 36 tests, no API key needed
+python -m pytest tests/   # 47 tests, no API key needed
 ```
 
 ---
@@ -124,7 +143,9 @@ Live API reference: `/api/py/docs`.
 
 ### `POST /api/py/screen`
 
-`multipart/form-data` — `resume` (PDF, ≤5 MB) and `job_description` (text).
+`multipart/form-data` — `resume` (PDF or DOCX, ≤5 MB) and `job_description`
+(text). Format is decided by the file's magic number, not its extension, so a
+mislabelled upload still reads correctly.
 
 ```jsonc
 {
@@ -148,8 +169,8 @@ Live API reference: `/api/py/docs`.
 The first five fields are the assignment's contract, unchanged. Everything below
 `scored` is what the interface renders.
 
-Errors return `{"detail": "..."}` with a status: `415` not a PDF, `422`
-unreadable PDF or a job description under 40 characters, `413` too large.
+Errors return `{"detail": "..."}` with a status: `415` unsupported format,
+`422` unreadable file or a job description under 40 characters, `413` too large.
 
 ### `GET /api/py/health`
 
@@ -182,18 +203,20 @@ lib/            shared types, the agent roster, sample fixtures
 api/index.py    FastAPI entry — the Vercel serverless function
 screening/      the agent pipeline (imported by api/index.py)
   agents/       one file per agent
-  services/     Gemini client, PDF extraction, skill taxonomy
+  services/     Gemini client, document extraction, skill taxonomy
+  orchestrator.py     linear route (default)
+  graph_orchestrator.py  LangGraph route, conditional
 public/samples/ synthetic resumes and roles — the interface's samples,
                 and the tests' fixtures
-tests/          36 deterministic tests
+tests/          47 deterministic tests
 ```
 
 ---
 
 ## Known limits
 
-- **Text-based PDFs only.** Scanned resumes need OCR; the API says so with a
-  `422` rather than silently scoring an empty file.
+- **Text-based PDF and DOCX only.** Scanned resumes need OCR; the API says so
+  with a `422` rather than silently scoring an empty file.
 - **Deterministic mode can't infer.** It matches a fixed vocabulary, so a skill
   described in words it doesn't know is invisible. LLM mode covers this.
 - **Section heuristics assume conventional resumes.** Excluding education dates

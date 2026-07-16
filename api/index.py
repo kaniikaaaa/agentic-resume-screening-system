@@ -5,6 +5,7 @@ Deployed as a single Vercel serverless function; `next.config.mjs` rewrites
 original request path to the function.
 """
 
+import logging
 import sys
 from pathlib import Path
 
@@ -15,8 +16,13 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from screening import config
-from screening.orchestrator import Orchestrator
-from screening.services.pdf import PDFExtractionError, extract_text_from_bytes
+from screening.services.documents import (
+    SUPPORTED_FORMATS,
+    DocumentError,
+    extract_text,
+)
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
     title="Agentic Resume Screening System",
@@ -26,13 +32,22 @@ app = FastAPI(
 )
 
 # Built once per container and reused across warm invocations.
-_orchestrator: Orchestrator | None = None
+_orchestrator = None
 
 
-def get_orchestrator() -> Orchestrator:
+def get_orchestrator():
     global _orchestrator
     if _orchestrator is None:
-        _orchestrator = Orchestrator()
+        if config.ORCHESTRATOR == "graph":
+            # Imported lazily: langgraph is a heavy import, and the linear
+            # default must not pay for it on every cold start.
+            from screening.graph_orchestrator import GraphOrchestrator
+
+            _orchestrator = GraphOrchestrator()
+        else:
+            from screening.orchestrator import Orchestrator
+
+            _orchestrator = Orchestrator()
     return _orchestrator
 
 
@@ -44,12 +59,13 @@ def health() -> dict:
         "mode": "llm" if llm.available else "rule_based",
         "llm_status": llm.status,
         "model": config.GEMINI_MODEL if llm.available else None,
+        "orchestrator": config.ORCHESTRATOR,
     }
 
 
 @app.post("/api/py/screen")
 async def screen(
-    resume: UploadFile = File(..., description="Candidate resume as a PDF"),
+    resume: UploadFile = File(..., description="Candidate resume — PDF or DOCX"),
     job_description: str = Form(..., description="Job description text"),
 ) -> JSONResponse:
     jd_text = (job_description or "").strip()
@@ -64,8 +80,12 @@ async def screen(
             detail=f"The job description exceeds {config.MAX_JD_CHARS:,} characters.",
         )
 
-    if resume.content_type and "pdf" not in resume.content_type.lower():
-        raise HTTPException(status_code=415, detail="The resume must be a PDF.")
+    filename = resume.filename or ""
+    if filename and not filename.lower().endswith(SUPPORTED_FORMATS):
+        raise HTTPException(
+            status_code=415,
+            detail=f"The resume must be a {' or '.join(f.upper()[1:] for f in SUPPORTED_FORMATS)}.",
+        )
 
     data = await resume.read()
     if len(data) > config.MAX_UPLOAD_BYTES:
@@ -75,8 +95,8 @@ async def screen(
         )
 
     try:
-        resume_text = extract_text_from_bytes(data)
-    except PDFExtractionError as exc:
+        resume_text = extract_text(data, filename)
+    except DocumentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     try:
@@ -84,6 +104,7 @@ async def screen(
     except Exception as exc:
         # The agents already degrade internally, so reaching here means
         # something genuinely unexpected broke.
+        logging.exception("Screening failed")
         raise HTTPException(
             status_code=500, detail=f"Screening failed: {exc}"
         ) from exc

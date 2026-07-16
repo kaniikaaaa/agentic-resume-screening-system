@@ -22,5 +22,9 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
-# The resumes under data/ are synthetic fixtures, not real candidates —
-# they are committed on purpose so the demo and tests work on a clone.
+# The resumes under public/samples/ are synthetic fixtures, not real
+# candidates — committed on purpose so the demo and tests work on a clone.
+
+# Editor artifact: VS Code recreated this path when the nested folder was
+# flattened. Nothing should live here.
+agentic-resume-screening-system-main/
