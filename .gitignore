@@ -1,0 +1,26 @@
+# python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# node
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+
+# vercel
+.vercel
+
+# os
+.DS_Store
+Thumbs.db
+
+# The resumes under data/ are synthetic fixtures, not real candidates —
+# they are committed on purpose so the demo and tests work on a clone.

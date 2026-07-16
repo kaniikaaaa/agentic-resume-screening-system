@@ -1,0 +1,250 @@
+.intake {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: 2rem var(--gutter) 3rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.legend {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.5rem;
+}
+
+.ordinal {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--vermillion);
+  letter-spacing: 0.08em;
+}
+
+.legendText {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.0625rem;
+  font-variation-settings: "SOFT" 30, "WONK" 1;
+}
+
+.hint {
+  margin-left: auto;
+  color: var(--ink-faint);
+}
+
+/* ── Dropzone ─────────────────────────────────────────── */
+
+.drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: 5.25rem;
+  padding: 1rem 1.125rem;
+  text-align: left;
+  background: var(--paper);
+  border: 1px dashed var(--rule-strong);
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.drop:hover {
+  border-color: var(--ink-mute);
+}
+
+.dragging {
+  border-color: var(--vermillion);
+  border-style: solid;
+  background: var(--vermillion-wash);
+}
+
+.loaded {
+  border-style: solid;
+  border-color: var(--ink);
+  background: var(--paper);
+}
+
+.dropIcon {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+}
+
+.loaded .dropIcon {
+  color: var(--vermillion);
+}
+
+.dropBody {
+  min-width: 0;
+}
+
+.dropTitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropMeta {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: var(--step--1);
+  color: var(--ink-mute);
+}
+
+.clear {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+  color: var(--ink-mute);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--rule-strong);
+  font-size: var(--step--1);
+}
+
+.clear:hover {
+  color: var(--vermillion);
+}
+
+.file {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ── Role text ────────────────────────────────────────── */
+
+.textarea {
+  width: 100%;
+  min-height: 11rem;
+  padding: 0.875rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  resize: vertical;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  transition: border-color 0.2s var(--ease);
+}
+
+.textarea:hover {
+  border-color: var(--ink-mute);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+.count {
+  align-self: flex-end;
+  font-size: var(--step--1);
+  color: var(--ink-faint);
+}
+
+/* ── Samples ──────────────────────────────────────────── */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.chip {
+  padding: 0.3125rem 0.625rem;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+  line-height: 1.3;
+  text-align: left;
+  transition: all 0.15s var(--ease);
+}
+
+.chip:hover {
+  border-color: var(--ink);
+  background: var(--paper);
+}
+
+.chipOn {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bone);
+}
+
+.chipOn:hover {
+  background: var(--ink);
+  color: var(--bone);
+}
+
+.chipNote {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+}
+
+.chipOn .chipNote {
+  color: var(--rule);
+}
+
+/* ── Submit ───────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+.submit {
+  flex: 1;
+  padding: 0.8125rem 1.25rem;
+  background: var(--ink);
+  color: var(--bone);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--ink);
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--vermillion);
+  border-color: var(--vermillion);
+}
+
+.submit:disabled {
+  background: transparent;
+  color: var(--ink-faint);
+  border-color: var(--rule);
+  cursor: not-allowed;
+}
+
+.reset {
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--rule-strong);
+}
+
+.reset:hover {
+  color: var(--vermillion);
+}
+
+.error {
+  padding: 0.625rem 0.875rem;
+  background: var(--vermillion-wash);
+  border-left: 2px solid var(--vermillion);
+  color: var(--vermillion-deep);
+  font-size: 0.875rem;
+}

@@ -1,0 +1,134 @@
+/*
+  Design language — "the case file".
+  Warm bone stock, ink type, hairline rules, one vermillion accent.
+  Structure comes from rules and spacing, never from drop shadows.
+*/
+
+:root {
+  --bone: #ece7dc;
+  --bone-deep: #e2dcce;
+  --paper: #f8f6f1;
+  --paper-sunk: #f2efe8;
+
+  --ink: #16140f;
+  --ink-soft: #45403a;
+  --ink-mute: #7d766a;
+  --ink-faint: #a49c8d;
+
+  --rule: #d5cebe;
+  --rule-soft: #e3ddd0;
+  --rule-strong: #b9b09c;
+
+  --vermillion: #b8432a;
+  --vermillion-deep: #8f3220;
+  --vermillion-wash: #f4e6e0;
+
+  --moss: #4a6440;
+  --moss-wash: #e8ece2;
+  --amber: #99701f;
+  --amber-wash: #f4ecd9;
+
+  --step--1: 0.75rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+  --step-3: 2rem;
+
+  --gutter: clamp(1.25rem, 4vw, 3.5rem);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bone);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--step-0);
+  line-height: 1.55;
+  font-feature-settings: "kern", "liga";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+/* Paper tooth. Sits above the page, beneath every interaction. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.42;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  font-variation-settings: "SOFT" 20, "WONK" 1;
+  line-height: 1.1;
+  letter-spacing: -0.012em;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--vermillion);
+  color: var(--paper);
+}
+
+:focus-visible {
+  outline: 2px solid var(--vermillion);
+  outline-offset: 2px;
+}
+
+/* Small caps label, set in mono. The recurring structural voice. */
+.label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

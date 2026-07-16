@@ -1,0 +1,127 @@
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.deck {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  align-items: start;
+}
+
+.left {
+  position: sticky;
+  top: 0;
+  border-right: 1px solid var(--ink);
+}
+
+.right {
+  min-height: 100%;
+  background: var(--paper-sunk);
+}
+
+/* ── Idle ─────────────────────────────────────────────── */
+
+.idle {
+  padding: 2rem var(--gutter) 3rem;
+}
+
+.idleHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.statement {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.25rem, 2.3vw, 1.5rem);
+  font-variation-settings: "SOFT" 50, "WONK" 1, "opsz" 24;
+  line-height: 1.38;
+  max-width: 34ch;
+  margin-bottom: 0.75rem;
+  text-wrap: pretty;
+}
+
+.statementSub {
+  color: var(--ink-mute);
+  max-width: 48ch;
+  margin-bottom: 2.25rem;
+  text-wrap: pretty;
+}
+
+.rosterHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ── Busy ─────────────────────────────────────────────── */
+
+.busy {
+  padding: 2rem var(--gutter) 3rem;
+}
+
+.busyHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.busyNote {
+  color: var(--ink-mute);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  max-width: 46ch;
+}
+
+/* ── Colophon ─────────────────────────────────────────── */
+
+.colophon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: baseline;
+  padding: 0.875rem var(--gutter);
+  border-top: 1px solid var(--ink);
+  background: var(--bone-deep);
+}
+
+.colophonNote {
+  margin-left: auto;
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+}
+
+.link {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--rule-strong);
+}
+
+.link:hover {
+  color: var(--vermillion);
+}
+
+@media (max-width: 60rem) {
+  .deck {
+    grid-template-columns: 1fr;
+  }
+
+  .left {
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid var(--ink);
+  }
+}

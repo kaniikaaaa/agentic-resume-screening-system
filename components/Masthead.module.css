@@ -1,0 +1,70 @@
+.masthead {
+  display: flex;
+  align-items: baseline;
+  gap: 1.25rem;
+  padding: 1.75rem var(--gutter) 1.125rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.mark {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  font-variation-settings: "SOFT" 40, "WONK" 1, "opsz" 30;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* The dot doubles as the panel's status light. */
+.mark::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 3px;
+  border-radius: 50%;
+  background: var(--vermillion);
+  vertical-align: 0.35em;
+}
+
+.tagline {
+  flex: 1;
+  border-left: 1px solid var(--rule);
+  padding-left: 1.25rem;
+  color: var(--ink-mute);
+}
+
+.mode {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  transition: background 0.4s var(--ease);
+}
+
+.live {
+  background: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-wash);
+}
+
+.offline {
+  background: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-wash);
+}
+
+@media (max-width: 40rem) {
+  .tagline {
+    display: none;
+  }
+
+  .mode {
+    margin-left: auto;
+  }
+}
