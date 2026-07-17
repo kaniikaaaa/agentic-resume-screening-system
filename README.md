@@ -108,7 +108,7 @@ Open <http://localhost:3000>. The interface ships with sample candidates and
 roles, so it works on a cold start with nothing to upload.
 
 ```bash
-python -m pytest tests/   # 47 tests, no API key needed
+python -m pytest tests/   # 57 tests, no API key needed
 ```
 
 ---
@@ -221,15 +221,28 @@ Reports which mode the deploy is in, and why.
 
 `0.6 × skill coverage + 0.4 × experience`, then:
 
-| Score | Outcome |
-|---|---|
-| ≥ 85 | Proceed to interview |
-| 65–84 | Needs manual review |
-| < 65 | Reject |
+| Score | Outcome | |
+|---|---|---|
+| ≥ 85 | Proceed to interview | closed automatically |
+| 65–84 | Needs manual review | held for a recruiter |
+| 60–64 | Needs manual review | **near miss** — held, confidence 0.5 |
+| < 60 | Reject | closed automatically |
 
 Skills are weighted higher because they're the more checkable signal. The
-interface draws both thresholds on the score rail, so you can see why a
+interface draws the bands on the score rail, so you can see why a
 recommendation fell where it did rather than taking it on faith.
+
+**Why the near-miss band.** With a bare cut at 65, a 65.0 reached a recruiter
+and a 64.9 got an automated no — on a difference the scoring cannot resolve,
+since one skill the parser misreads moves a candidate further than that. Worse,
+the panel was contradicting itself: `ExperienceAgent` would report *"marginally
+short"* while `DecisionAgent` rejected outright and set `requires_human: false`.
+Scores in the 60–64 band are held instead, with the confidence dropped to 0.5
+and the rationale saying which way it fell — a borderline no, not a solid maybe.
+
+This doesn't abolish the cliff, it moves it to 60, where a rejection is one the
+panel's own reasoning supports. A wrongly rejected candidate is the one error
+nobody ever finds out about, so it's the one worth paying for.
 
 ---
 
@@ -251,7 +264,7 @@ screening/      the agent pipeline (imported by api/index.py)
   graph_orchestrator.py  LangGraph route, conditional
 public/samples/ synthetic resumes and roles — the interface's samples,
                 and the tests' fixtures
-tests/          47 deterministic tests
+tests/          57 deterministic tests
 ```
 
 ---

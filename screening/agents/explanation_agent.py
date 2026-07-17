@@ -1,3 +1,6 @@
+from screening.agents.decision_agent import REVIEW_THRESHOLD
+
+
 class ExplanationAgent:
     """Writes the plain-language rationale behind the decision.
 
@@ -17,7 +20,16 @@ class ExplanationAgent:
             experience_result["reason"],
         ]
 
-        if decision_result["requires_human"]:
+        if decision_result.get("near_miss"):
+            # Say which way it fell. "Held for review" alone reads as a solid
+            # maybe; this is a no that landed inside the scoring's own margin.
+            parts.append(
+                f"This scored {decision_result['final_score']:g}, just under the "
+                f"{REVIEW_THRESHOLD} needed for review — close enough that one "
+                "missed skill would move it either way, so it is going to a "
+                "recruiter rather than being rejected outright."
+            )
+        elif decision_result["requires_human"]:
             parts.append("Flagged for a recruiter to confirm before any action is taken.")
 
         if resume_data.get("source") == "rule_based":

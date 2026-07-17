@@ -4,6 +4,14 @@ EXPERIENCE_WEIGHT = 0.4
 INTERVIEW_THRESHOLD = 85
 REVIEW_THRESHOLD = 65
 
+# Below the review line, but not by more than the scoring is precise to. A
+# skill the parser missed, or a year read differently, moves a candidate across
+# this much on its own — so a bare threshold at 65 meant 65.0 got a recruiter
+# and 64.9 got an automated no, on a difference the system cannot actually
+# resolve. These are held instead. It is the same cliff, moved somewhere the
+# panel isn't contradicting its own reasoning.
+NEAR_MISS_THRESHOLD = 60
+
 
 class DecisionAgent:
     """Combines the skill and experience scores into a hiring action.
@@ -37,10 +45,17 @@ class DecisionAgent:
             2,
         )
 
+        near_miss = False
+
         if final_score >= INTERVIEW_THRESHOLD:
             recommendation, requires_human, confidence = "Proceed to interview", False, 0.9
         elif final_score >= REVIEW_THRESHOLD:
             recommendation, requires_human, confidence = "Needs manual review", True, 0.6
+        elif final_score >= NEAR_MISS_THRESHOLD:
+            # Held, but say why: this is a borderline no, not a solid maybe,
+            # and the confidence should not pretend otherwise.
+            recommendation, requires_human, confidence = "Needs manual review", True, 0.5
+            near_miss = True
         else:
             recommendation, requires_human, confidence = "Reject", False, 0.75
 
@@ -56,6 +71,7 @@ class DecisionAgent:
             "recommendation": recommendation,
             "requires_human": requires_human,
             "confidence": confidence,
+            "near_miss": near_miss,
             "reason": None,
         }
 

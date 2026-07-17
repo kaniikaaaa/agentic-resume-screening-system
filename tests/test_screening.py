@@ -12,6 +12,7 @@ os.environ["USE_LLM"] = "false"
 import pytest
 
 from screening.agents.decision_agent import DecisionAgent
+from screening.agents.explanation_agent import ExplanationAgent
 from screening.agents.experience_agent import ExperienceAgent
 from screening.agents.skill_match_agent import SkillMatchAgent
 from screening.orchestrator import Orchestrator
@@ -153,6 +154,67 @@ def test_unreadable_resume_escalates():
         {"skills": []},
     )
     assert result["requires_human"] is True
+
+
+def _decide(skill_score: int, exp_score: int) -> dict:
+    return DecisionAgent().decide(
+        {"score": skill_score},
+        {"score": exp_score, "status": "Fit"},
+        {"required_skills": ["Python", "SQL"], "jd_clarity": "clear"},
+        {"skills": ["Python"]},
+    )
+
+
+@pytest.mark.parametrize(
+    "skill,exp,expected,human",
+    [
+        (100, 100, "Proceed to interview", False),   # 100
+        (90, 80, "Proceed to interview", False),     # 86
+        (80, 70, "Needs manual review", True),       # 76
+        (70, 60, "Needs manual review", True),       # 66
+        (60, 65, "Needs manual review", True),       # 62 — near miss, held
+        (55, 60, "Reject", False),                   # 57 — a clear no
+        (10, 30, "Reject", False),                   # 18
+    ],
+)
+def test_decision_bands(skill, exp, expected, human):
+    result = _decide(skill, exp)
+    assert result["recommendation"] == expected
+    assert result["requires_human"] is human
+
+
+def test_near_miss_is_held_not_rejected():
+    # The case that motivated this: scoring a shade under the review line used
+    # to be an automated no, on a margin the scoring cannot resolve.
+    result = _decide(60, 65)  # 62.0
+    assert 60 <= result["final_score"] < 65
+    assert result["recommendation"] == "Needs manual review"
+    assert result["requires_human"] is True
+    assert result["near_miss"] is True
+    # Held, but honestly: a borderline no, not a solid maybe.
+    assert result["confidence"] < 0.6
+
+
+def test_near_miss_explanation_says_which_way_it_fell():
+    decision = _decide(60, 65)
+    text = ExplanationAgent().generate(
+        {"skills": ["Python"], "source": "llm"},
+        {"required_skills": ["Python", "SQL"], "jd_clarity": "clear"},
+        {"score": 60, "matched_skills": ["Python"], "missing_skills": ["SQL"],
+         "coverage": "1/2"},
+        {"score": 65, "status": "Slightly under", "reason": "marginally short."},
+        decision,
+    )
+    assert "just under" in text
+    assert "recruiter" in text
+
+
+def test_a_clear_reject_is_still_rejected():
+    # The near-miss band must not quietly turn every rejection into review.
+    result = _decide(10, 30)
+    assert result["recommendation"] == "Reject"
+    assert result["requires_human"] is False
+    assert result["near_miss"] is False
 
 
 def test_unknown_experience_forces_review():

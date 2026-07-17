@@ -6,8 +6,15 @@ import type { ScreeningResult } from "@/lib/types";
 import Trace from "./Trace";
 import styles from "./Verdict.module.css";
 
-/** Mirrors DecisionAgent's cuts, so the rail shows why the call went as it did. */
-const REVIEW_AT = 65;
+/**
+ * Mirrors DecisionAgent's cuts, so the rail shows why the call went as it did.
+ *
+ * The review band opens at NEAR_MISS_THRESHOLD, not REVIEW_THRESHOLD: a 62
+ * scores below 65 but is still held for a recruiter, so 60 is where the
+ * outcome actually changes. Drawing the line at 65 would put the marker in the
+ * reject band on a case the panel did not reject.
+ */
+const REVIEW_AT = 60;
 const INTERVIEW_AT = 85;
 
 const ZONES = [
