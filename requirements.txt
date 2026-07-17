@@ -5,6 +5,14 @@ pypdf==5.1.0
 python-docx==1.1.2
 google-genai==0.3.0
 
+# Pinned, and not only for reproducibility: google-genai asks for
+# "pydantic<3.0.0dev", and per PEP 440 a specifier carrying a dev/pre marker
+# opts that dependency into pre-releases. pip then resolves to the newest
+# pre-release it can find — a deploy built on 2026-07-16 installed the alpha
+# 2.14.0a1 into production. Nothing here needs 2.14; every constraint in the
+# tree is satisfied by the latest stable.
+pydantic==2.13.4
+
 # Only imported when ORCHESTRATOR=graph. Kept in the main requirements so the
 # graph route works on a deploy without a second install step.
 langgraph==1.0.7
