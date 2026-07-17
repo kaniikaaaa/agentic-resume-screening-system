@@ -114,44 +114,88 @@
 
 .rail {
   position: relative;
-  height: 6px;
+  height: 8px;
   background: var(--bone-deep);
   border: 1px solid var(--rule);
 }
 
-.fill {
+/* The three bands the DecisionAgent actually cuts on. Tinted, never filled —
+   the rail is a scale, and the marker is the reading. */
+.zone {
   position: absolute;
-  inset: 0 auto 0 0;
-  background: var(--ink);
-  animation: sweep 0.75s var(--ease) both 0.15s;
-  transform-origin: left;
+  top: 0;
+  bottom: 0;
 }
 
-.proceedFill {
-  background: var(--moss);
+.zone_reject {
+  background: var(--bone-deep);
 }
 
-.reviewFill {
-  background: var(--amber);
+.zone_review {
+  background: var(--amber-wash);
+  border-left: 1px solid var(--rule-strong);
 }
 
-.rejectFill {
-  background: var(--vermillion);
+.zone_interview {
+  background: var(--moss-wash);
+  border-left: 1px solid var(--rule-strong);
 }
 
-@keyframes sweep {
+/* Where the candidate landed. Overhangs the rail so it stays legible even when
+   it sits a hair from a band edge — which is exactly when it matters most. */
+.marker {
+  position: absolute;
+  top: -7px;
+  bottom: -7px;
+  width: 2px;
+  margin-left: -1px;
+  color: var(--ink);
+  animation: drop 0.45s var(--ease) both 0.15s;
+}
+
+.marker::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+}
+
+.marker::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: currentColor;
+}
+
+.proceedMarker {
+  color: var(--moss);
+}
+
+.reviewMarker {
+  color: var(--amber);
+}
+
+.rejectMarker {
+  color: var(--vermillion);
+}
+
+@keyframes drop {
   from {
-    transform: scaleX(0);
+    opacity: 0;
+    transform: translateY(-5px);
   }
 }
 
-/* Thresholds, drawn where the DecisionAgent actually cuts. */
-.tick {
-  position: absolute;
-  top: -5px;
-  bottom: -5px;
-  width: 1px;
-  background: var(--ink-mute);
+.gap {
+  margin-top: 0.5rem;
+  font-size: var(--step--1);
+  color: var(--ink-mute);
+  font-style: italic;
 }
 
 .tickLabels {

@@ -7,10 +7,33 @@ import Trace from "./Trace";
 import styles from "./Verdict.module.css";
 
 /** Mirrors DecisionAgent's cuts, so the rail shows why the call went as it did. */
-const THRESHOLDS = [
-  { at: 65, label: "review" },
-  { at: 85, label: "interview" },
-];
+const REVIEW_AT = 65;
+const INTERVIEW_AT = 85;
+
+const ZONES = [
+  { key: "reject", from: 0, to: REVIEW_AT },
+  { key: "review", from: REVIEW_AT, to: INTERVIEW_AT },
+  { key: "interview", from: INTERVIEW_AT, to: 100 },
+] as const;
+
+/**
+ * How far the score sits from the line above it.
+ *
+ * A bare "64" next to a "65 review" tick reads as a rounding artefact. Saying
+ * the distance out loud is what makes a near miss legible — and a near miss is
+ * exactly the case a recruiter would want to look at.
+ */
+function distanceToNextLine(score: number): string | null {
+  const line = score < REVIEW_AT ? REVIEW_AT : score < INTERVIEW_AT ? INTERVIEW_AT : null;
+  if (line === null) return null;
+
+  const gap = line - score;
+  if (gap > 12) return null;
+
+  const points = gap < 1 ? gap.toFixed(1) : Math.round(gap);
+  const name = line === REVIEW_AT ? "review" : "interview";
+  return `${points} ${gap === 1 ? "point" : "points"} below the ${name} line`;
+}
 
 export default function Verdict({ result }: { result: ScreeningResult }) {
   const [showRaw, setShowRaw] = useState(false);
@@ -43,30 +66,45 @@ export default function Verdict({ result }: { result: ScreeningResult }) {
           <div className={styles.railWrap}>
             {result.scored ? (
               <>
+                {/*
+                  Bands, not a fill. A bar whose length tracked the score read as
+                  a progress meter — 64 looked two-thirds "full" and therefore
+                  good, while the colour said Reject. The score is a position on
+                  a scale, not an amount collected, so the rail shows the three
+                  bands and marks where the candidate landed.
+                */}
                 <div className={styles.rail}>
-                  <div
-                    className={`${styles.fill} ${styles[`${tone}Fill`]}`}
-                    style={{ width: `${result.final_score}%` }}
-                  />
-                  {THRESHOLDS.map((t) => (
+                  {ZONES.map((z) => (
                     <span
-                      key={t.at}
-                      className={styles.tick}
-                      style={{ left: `${t.at}%` }}
+                      key={z.key}
+                      className={`${styles.zone} ${styles[`zone_${z.key}`]}`}
+                      style={{ left: `${z.from}%`, width: `${z.to - z.from}%` }}
                     />
                   ))}
+                  <span
+                    className={`${styles.marker} ${styles[`${tone}Marker`]}`}
+                    style={{ left: `${result.final_score}%` }}
+                    aria-hidden="true"
+                  />
                 </div>
+
                 <div className={styles.tickLabels}>
-                  {THRESHOLDS.map((t) => (
+                  {ZONES.slice(1).map((z) => (
                     <span
-                      key={t.at}
+                      key={z.key}
                       className={`label ${styles.tickLabel}`}
-                      style={{ left: `${t.at}%` }}
+                      style={{ left: `${z.from}%` }}
                     >
-                      {t.at} {t.label}
+                      {z.from} {z.key}
                     </span>
                   ))}
                 </div>
+
+                {distanceToNextLine(result.final_score) && (
+                  <p className={styles.gap}>
+                    {distanceToNextLine(result.final_score)}
+                  </p>
+                )}
               </>
             ) : (
               <p className={styles.empty}>
