@@ -33,10 +33,14 @@
 
 /* ── Ruling ───────────────────────────────────────────── */
 
+/* The verdict stripe runs down the column's own edge. It used to hang off a
+   negative margin, which pulled the whole block out of the column and across
+   the divider, and left the ruling sitting ~2rem to the left of every other
+   block's text. The bar takes the 3px out of the gutter so the ruling still
+   lines up with the score, the reasoning and the skills below it. */
 .ruling {
   border-left: 3px solid var(--ink);
-  padding-left: 1.125rem;
-  margin-left: calc(var(--gutter) * -1 + 1.5rem);
+  padding-left: calc(var(--gutter) - 3px);
 }
 
 .proceed {
